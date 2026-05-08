@@ -287,6 +287,9 @@ class GUI:
         self.info_var.set(message)
 
     def show_end(self, winner, scores):
+        self.canvas.unbind("<Motion>")
+        self.canvas.unbind("<Leave>")
+        self.canvas.unbind("<Button-1>")
         self.canvas.delete("all")
         c = self.canvas
         w, h = self.WIDTH, self.HEIGHT
