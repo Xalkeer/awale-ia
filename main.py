@@ -1,16 +1,15 @@
-# This is a sample Python script.
-
-# Press Maj+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
-
-
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+from awale import Awale
+from player import StupidBot
+from game import Game
 
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
+def main():
+    awale_game = Awale()
+    bot1 = StupidBot(number=0, awale=awale_game, name="R2D2 (Bottom)")
+    bot2 = StupidBot(number=1, awale=awale_game, name="C3PO (Top)")
+    game = Game(bot1, bot2)
+    game.start()
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+
+if __name__ == "__main__":
+    main()
