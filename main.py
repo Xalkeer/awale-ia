@@ -1,12 +1,12 @@
 from awale import Awale
-from player import StupidBot, HumanPlayer
+from player import StupidBot, HumanPlayer, MCTSBot
 from game import Game
 
 
 def main():
     awale_game = Awale()
-    p1 = HumanPlayer(number=0, awale=awale_game, name="R2D2 (Bottom)")
-    p2 = StupidBot(number=1, awale=awale_game, name="C3PO (Top)")
+    p1 = StupidBot(number=0, awale=awale_game, name="Stupid Bot")
+    p2 = MCTSBot(number=1, awale=awale_game, name="MCTS", max_iterations=500)
     game = Game(p1, p2)
     game.start()
 
