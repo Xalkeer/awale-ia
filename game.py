@@ -6,10 +6,39 @@ from gui import GUI
 class Game:
     AI_DELAY_MS = 600
 
-    def __init__(self, player1, player2):
-        self.awale = player1.get_awale()
-        if player2.get_awale() is not self.awale:
-            raise ValueError("Both players must share the same Awale instance.")
+    def __init__(self, player1, player2, awale=None):
+        """Initialise la partie.
+
+        player1/player2 peuvent être :
+          - des objets exposant get_awale(), get_name(), choose_move(valid_moves)
+          - ou des IA comme MCTS qui exposent choose_move(awale)
+
+        On accepte aussi de passer explicitement une instance `awale`.
+        """
+        # déterminer l'instance Awale à utiliser
+        if awale is not None:
+            self.awale = awale
+        else:
+            # essayer d'obtenir via get_awale() si disponible
+            a = None
+            for p in (player1, player2):
+                try:
+                    a = p.get_awale()
+                    break
+                except Exception:
+                    # p n'expose pas get_awale()
+                    a = None
+            # si toujours None, créer une nouvelle instance
+            self.awale = a if a is not None else Awale()
+
+        # vérifier que, si un joueur fournit get_awale, il correspond à self.awale
+        for p in (player1, player2):
+            try:
+                pa = p.get_awale()
+            except Exception:
+                pa = None
+            if pa is not None and pa is not self.awale:
+                raise ValueError("Both players must share the same Awale instance.")
 
         self.players = [player1, player2]
         self.root = tk.Tk()
@@ -41,7 +70,17 @@ class Game:
             self.root.after(self.AI_DELAY_MS, lambda: self.play_ai(player, moves))
 
     def play_ai(self, player, moves):
-        move = player.choose_move(moves)
+        # Certains bots (MinMax, StupidBot) attendent choose_move(valid_moves)
+        # D'autres (MCTS) attendent choose_move(awale). On essaye les deux.
+        try:
+            move = player.choose_move(moves)
+        except TypeError:
+            # signature différente : essayer en passant l'état complet
+            try:
+                move = player.choose_move(self.awale)
+            except Exception:
+                # Ne pas interrompre l'UI ; retourner None
+                move = None
         if move is not None:
             self.awale.play(move)
             self.view.update_view()

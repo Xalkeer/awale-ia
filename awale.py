@@ -83,6 +83,7 @@ class Awale:
         self.current_player = self.opponent(self.current_player)
         return True
 
+
     def sow(self, hole):
         seeds = self.board[hole]
         self.board[hole] = 0
