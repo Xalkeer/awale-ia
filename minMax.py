@@ -119,19 +119,36 @@ class MinMaxBot:
             return self.secondHeuristic(game)
         return self.firstHeurtisitc(game)
 
-
-    # Heuristic simple : On valorise uniquement le fait de capturer une graine
+    # Joue en fonction d'une analyse structurelle du plateau pour être robuste et défensif.
+    # On prend d'abord la différence de score actuel qui reste le facteur le plus important.
+    # Ensuite, on gère le risque en vérifiant nos vulnérabilités (cases à 1 ou 2 graines)
+    # et nos opportunités d'attaque dans le camp adverse.
+    # Enfin, on prend en compte la création de greniers (cases >= 12 graines) et la mobilité.
     def firstHeurtisitc(self, game):
-        player = self.number
-        opponent = 1 - player
-
+        p = self.number
+        opp = 1 - p
         if game.is_finished():
             return self.final_score(game)
-
-        captures_diff = game.get_score(player) - game.get_score(opponent)
-        seeds_diff = game.total_seeds_player(player) - game.total_seeds_player(opponent)
-
-        return captures_diff * 10.0 + seeds_diff * 1.0
+        score_diff = game.get_score(p) - game.get_score(opp)
+        seed_diff = game.total_seeds_player(p) - game.total_seeds_player(opp)
+        p_pits = range(0, 6) if p == 0 else range(6, 12)
+        opp_pits = range(6, 12) if p == 0 else range(0, 6)
+        vuln = 0
+        att = 0
+        storage = 0
+        for pit in p_pits:
+            seeds = game.get_seeds_in_pit(pit)
+            if seeds == 1 or seeds == 2:
+                vuln += 1
+            if seeds >= 12:
+                storage += 1
+        for pit in opp_pits:
+            seeds = game.get_seeds_in_pit(pit)
+            if seeds == 1 or seeds == 2:
+                att += 1
+        mob_diff = len(game.valid_moves(p)) - len(game.valid_moves(opp))
+        score = ((score_diff * 50.0)+(att * 8.0)-(vuln * 12.0)+(storage * 5.0)+(mob_diff * 3.0)+(seed_diff * 1.0))
+        return score
 
 
     # Joue en fonction du prochain coup jouer de l'adversaire, plus forte mais prends plus de temps
