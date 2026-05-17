@@ -1,177 +1,76 @@
-class Awale:
-    NB_HOLES = 12
-    NB_HOLES_PER_PLAYER = 6
-    INITIAL_SEEDS = 4
+import copy
 
-    def __init__(self):
-        self.board = [self.INITIAL_SEEDS] * self.NB_HOLES
-        self.captures = [0, 0]
-        self.current_player = 0
 
-    def get_board(self):
-        return self.board[:]
+class MinMax:
+    def __init__(self, number, awale, name="", depth=4):
+        if number not in (0, 1):
+            raise ValueError("Player number must be 0 or 1.")
+        self.number = number
+        self.awale = awale
+        self.name = name or f"MinMaxBot {number + 1}"
+        self.depth = depth
 
-    def get_captures(self):
-        return self.captures[:]
+    def heuristic_material(self, game_state):
+        score_ia = game_state.get_score(self.number)
+        score_adv = game_state.get_score(1 - self.number)
+        if score_ia > 24: return float('inf')
+        if score_adv > 24: return -float('inf')
+        return score_ia - score_adv
 
-    def get_current_player(self):
-        return self.current_player
+    def heuristic_strategic(self, game_state):
+        score = self.heuristic_material(game_state)
+        mes_trous = game_state.player_holes(self.number)
+        trous_adv = game_state.player_holes(1 - self.number)
+        board = game_state.get_board()
+        for i in mes_trous:
+            if board[i] in (1, 2):
+                score -= 0.5
+        for i in trous_adv:
+            if board[i] in (1, 2):
+                score += 0.5
 
-    def get_seeds_hole(self, index):
-        return self.board[index]
+        return score
 
-    def get_score(self, player):
-        return self.captures[player]
-
-    def player_holes(self, player):
-        if player == 0:
-            return list(range(0, 6))
-        else:
-            return list(range(6, 12))
-
-    def opponent(self, player):
-        return 1 - player
-
-    def total_seeds_player(self, player):
-        return sum(self.board[i] for i in self.player_holes(player))
-
-    def valid_moves(self, player=None):
-        if player is None:
-            player = self.current_player
-
-        opponent = self.opponent(player)
-        holes = self.player_holes(player)
-
-        candidates = [i for i in holes if self.board[i] > 0]
-
-        if not candidates:
-            return []
-
-        if self.total_seeds_player(opponent) == 0:
-            feeding_moves = [
-                i for i in candidates
-                if self.simulates_feeding(i, player)
-            ]
-            return feeding_moves if feeding_moves else candidates
-
-        return candidates
-
-    def simulates_feeding(self, hole, player):
-        opponent = self.opponent(player)
-        opponent_holes = self.player_holes(opponent)
-
-        temp_board = self.board[:]
-        seeds = temp_board[hole]
-        temp_board[hole] = 0
-        pos = hole
-
-        for _ in range(seeds):
-            pos = (pos + 1) % self.NB_HOLES
-            if pos == hole:
-                pos = (pos + 1) % self.NB_HOLES
-            temp_board[pos] += 1
-
-        return any(temp_board[i] > 0 for i in opponent_holes)
-
-    def play(self, hole):
-        if hole not in self.valid_moves():
-            return False
-
-        final_hole = self.sow(hole)
-        self.capture(final_hole)
-
-        self.current_player = self.opponent(self.current_player)
-        return True
-
-    def sow(self, hole):
-        seeds = self.board[hole]
-        self.board[hole] = 0
-        pos = hole
-
-        for _ in range(seeds):
-            pos = (pos + 1) % self.NB_HOLES
-            if pos == hole:
-                pos = (pos + 1) % self.NB_HOLES
-            self.board[pos] += 1
-
-        return pos
-
-    def capture(self, final_pos):
-        player = self.current_player
-        opponent = self.opponent(player)
-        opponent_holes = set(self.player_holes(opponent))
-
-        if final_pos not in opponent_holes:
-            return
-
-        to_capture = []
-        pos = final_pos
-
-        while pos in opponent_holes and self.board[pos] in (2, 3):
-            to_capture.append(pos)
-            pos = (pos - 1) % self.NB_HOLES
-
-        if not to_capture:
-            return
-
-        total_opponent_seeds = sum(self.board[i] for i in opponent_holes)
-        targeted_seeds = sum(self.board[i] for i in to_capture)
-
-        if targeted_seeds == total_opponent_seeds:
-            return
-
-        for p in to_capture:
-            self.captures[player] += self.board[p]
-            self.board[p] = 0
-
-    def is_finished(self):
-        if self.captures[0] > 24 or self.captures[1] > 24:
-            return True
-        if self.captures[0] == 24 and self.captures[1] == 24:
-            return True
-        if not self.valid_moves():
-            return True
-        if sum(self.board) <= 6:
-            return True
-        return False
-
-    def winner(self):
-        if not self.is_finished():
-            return None
-
-        scores = self.captures[:]
-        for player in (0, 1):
-            for i in self.player_holes(player):
-                scores[player] += self.board[i]
-
-        if scores[0] > scores[1]:
-            return 0
-        elif scores[1] > scores[0]:
-            return 1
-        else:
-            return -1
-
-    def final_scores(self):
-        scores = self.captures[:]
-        for player in (0, 1):
-            for i in self.player_holes(player):
-                scores[player] += self.board[i]
-        return scores
-
-    def copy(self):
-        new_game = Awale.__new__(Awale)
-        new_game.board = self.board[:]
-        new_game.captures = self.captures[:]
-        new_game.current_player = self.current_player
-        return new_game
-
-    def __str__(self):
-        p = self.board
-        line1 = "  ".join(f"{p[i]:2d}" for i in range(11, 5, -1))
-        line2 = "  ".join(f"{p[i]:2d}" for i in range(0, 6))
-        sep = "-" * 35
-        return (
-            f"Player 2 [{self.captures[1]:2d}] : {line1}\n"
-            f"{sep}\n"
-            f"Player 1 [{self.captures[0]:2d}] : {line2}"
+    def get_best_move(self):
+        val, move = self.minimax(
+            self.awale,
+            self.depth,
+            -float('inf'),
+            float('inf'),
+            True
         )
+        return move
+
+    def minimax(self, game_state, depth, alpha, beta, maximizing_player):
+        if depth == 0 or game_state.is_finished():
+            return self.heuristic_strategic(game_state), None
+        moves = game_state.valid_moves()
+        if not moves:
+            return self.heuristic_strategic(game_state), None
+        best_move = moves[0]
+        if maximizing_player:
+            max_eval = -float('inf')
+            for move in moves:
+                new_state = game_state.copy()
+                new_state.play(move)
+                eval_score, _ = self.minimax(new_state, depth - 1, alpha, beta, False)
+                if eval_score > max_eval:
+                    max_eval = eval_score
+                    best_move = move
+                alpha = max(alpha, eval_score)
+                if beta <= alpha:
+                    return max_eval, best_move
+            return max_eval, best_move
+        else:
+            min_eval = float('inf')
+            for move in moves:
+                new_state = game_state.copy()
+                new_state.play(move)
+                eval_score, _ = self.minimax(new_state, depth - 1, alpha, beta, True)
+                if eval_score < min_eval:
+                    min_eval = eval_score
+                    best_move = move
+                beta = min(beta, eval_score)
+                if beta <= alpha:
+                    return min_eval, best_move
+            return min_eval, best_move
